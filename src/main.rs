@@ -42,8 +42,8 @@ struct Config {
     download_address: String,
 }
 
-// mod extract;
-// use extract::real_main;
+mod extract;
+use extract::unzip;
 
 fn handle_args(args: Args) {
     let config = Config {
@@ -80,8 +80,12 @@ fn handle_args(args: Args) {
                             println!("template files download completed!");
 
                             let file_path = format!("{}/temp.zip", config.cache_dir);
+                            let status = unzip(&file_path, &config.cache_dir);
 
-                            // real_main(&file_path);
+                            if status == 0 {
+                                // fs::rename("a.txt", "b.txt")?;
+                                fs::remove_file(&file_path).expect("文件删除失败！");
+                            }
                         }
                         _ => {
                             println!("template files download failed!");
