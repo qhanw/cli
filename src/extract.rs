@@ -1,5 +1,6 @@
 use std::fs;
 use std::io;
+use std::path::Path;
 use std::path::PathBuf;
 
 pub fn unzip(fname: &str, cache_dir: &str) -> i32 {
@@ -11,7 +12,18 @@ pub fn unzip(fname: &str, cache_dir: &str) -> i32 {
         let mut file = archive.by_index(i).unwrap();
 
         let outpath = match file.enclosed_name() {
-            Some(path) => path.to_owned(),
+            Some(path) => {
+                let p = path.strip_prefix("ant-design-pro-master");
+
+                let ps = match p {
+                    Ok(a) => Path::new("ant-design-pro").join(a),
+                    Err(_) => path.to_owned(),
+                };
+
+                println!("ps: {}", &ps.display());
+
+                ps
+            }
             None => continue,
         };
 
@@ -23,6 +35,8 @@ pub fn unzip(fname: &str, cache_dir: &str) -> i32 {
         }
 
         let output = get_path(cache_dir, &outpath);
+
+        println!("file: {} ", file.name());
 
         if (*file.name()).ends_with('/') {
             println!("File {} extracted to \"{}\"", i, outpath.display());

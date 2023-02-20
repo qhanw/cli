@@ -1,4 +1,8 @@
-use std::{fs, path::Path, process};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    process,
+};
 
 use clap::{Parser, Subcommand};
 
@@ -45,6 +49,9 @@ struct Config {
 mod extract;
 use extract::unzip;
 
+mod clear;
+use clear::*;
+
 fn handle_args(args: Args) {
     let config = Config {
         cache_dir: String::from("./.temp"),
@@ -58,13 +65,30 @@ fn handle_args(args: Args) {
     match &args.command {
         Commands::New { name, simple } => {
             if let Some(name) = name {
-                let temp_dir = Path::new(&config.cache_dir).is_dir();
-                if temp_dir {
-                    println!("create app, name is: {}, {}", name, simple);
+                // 创建缓存文件夹
+                let cache_dir_exists = Path::new(&config.cache_dir).exists();
+                if !cache_dir_exists {
+                    fs::create_dir(&config.cache_dir).expect("文件夹创建失败！！！");
+                }
 
+                println!("create app, name is: {}, {}", name, simple);
+
+                let temp_exists = Path::new(&config.cache_dir).join("temp.zip").exists();
+
+                if temp_exists {
+                    let file_path = format!("{}/temp.zip", config.cache_dir);
+                    let status = unzip(&file_path, &config.cache_dir);
+
+                    if status == 0 {
+                        remove_files(Path::new(&config.cache_dir).join("ant-design-pro"));
+
+                        //  根据版本号下载最新模板
+                        // fs::remove_file(&file_path).expect("文件删除失败！");
+                    }
+                } else {
                     let clone_exec = format!(
                         "cd {} && curl {} --output temp.zip",
-                        config.cache_dir, config.download_address
+                        &config.cache_dir, &config.download_address
                     );
 
                     // 执行模版文件下载
@@ -83,8 +107,8 @@ fn handle_args(args: Args) {
                             let status = unzip(&file_path, &config.cache_dir);
 
                             if status == 0 {
-                                // fs::rename("a.txt", "b.txt")?;
-                                fs::remove_file(&file_path).expect("文件删除失败！");
+
+                                // fs::remove_file(&file_path).expect("文件删除失败！");
                             }
                         }
                         _ => {
@@ -92,11 +116,7 @@ fn handle_args(args: Args) {
                             println!("{:?}", output);
                         }
                     }
-                } else {
-                    fs::create_dir(config.cache_dir).expect("文件夹创建失败！！！");
                 }
-
-                // println!("create app, name is: {}, {}", name, simple)
             } else {
                 println!("please enter an application name.");
             }
