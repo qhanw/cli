@@ -1,11 +1,17 @@
 use std::fs;
 use std::io;
-use std::path::Path;
-use std::path::PathBuf;
+use std::io::prelude::*;
+use std::path::{Path, PathBuf};
+
+use serde_json::Value;
 
 pub fn unzip(fname: &str, cache_dir: &str) -> i32 {
-    let file = fs::File::open(fname).unwrap();
+    fs::remove_dir_all(Path::new(cache_dir).join("ant-design-pro")).expect("文件删除失败！");
 
+    let ignore_rules = ignore_rules(read_package_json(&fname));
+    println!("ignore_rules {:?}", &ignore_rules);
+
+    let file = fs::File::open(fname).unwrap();
     let mut archive = zip::ZipArchive::new(file).unwrap();
 
     for i in 0..archive.len() {
@@ -13,6 +19,8 @@ pub fn unzip(fname: &str, cache_dir: &str) -> i32 {
 
         let outpath = match file.enclosed_name() {
             Some(path) => {
+                // let p = path.to_str().unwrap().to_string().replace("-master", "");
+
                 let p = path.strip_prefix("ant-design-pro-master");
 
                 let ps = match p {
@@ -20,7 +28,21 @@ pub fn unzip(fname: &str, cache_dir: &str) -> i32 {
                     Err(_) => path.to_owned(),
                 };
 
-                println!("ps: {}", &ps.display());
+                if let Some(x) = ps.to_str() {
+                    let mut is_ignore = false;
+                    for igr in &ignore_rules {
+                        let p = format!("ant-design-pro/{igr}").to_lowercase();
+
+                        if x.to_lowercase().starts_with(&p) {
+                            is_ignore = true;
+                            break;
+                        }
+                    }
+
+                    if is_ignore {
+                        continue;
+                    }
+                }
 
                 ps
             }
@@ -74,4 +96,51 @@ pub fn unzip(fname: &str, cache_dir: &str) -> i32 {
 
 fn get_path(cache_dir: &str, outpath: &PathBuf) -> String {
     format!("{}/{}", cache_dir, &outpath.display())
+}
+
+// 获取模板文件 package json 配置文件
+fn read_package_json(fname: &str) -> Value {
+    let zipfile = std::fs::File::open(fname).unwrap();
+    let mut archive = zip::ZipArchive::new(zipfile).unwrap();
+
+    let mut file = archive
+        .by_name("ant-design-pro-master/package.json")
+        .unwrap();
+    let mut contents = String::new();
+    file.read_to_string(&mut contents).unwrap();
+
+    serde_json::from_str(&contents).unwrap()
+}
+
+// 忽略文件规则
+fn ignore_rules(package: Value) -> Vec<String> {
+    let mut ignores = vec![
+        String::from("pnpm-lock.yaml"),
+        String::from("public/CNAME"),
+        // readme.md
+        String::from("README"),
+        String::from("src/locales/bn-BD"),
+        String::from("src/locales/fa-IR"),
+        String::from("src/locales/id-ID"),
+        String::from("src/locales/ja-JP"),
+        String::from("src/locales/pt-BR"),
+        String::from("src/locales/zh-TW"),
+    ];
+
+    let ignore = &package["create-umi"];
+
+    for igr in vec!["ignore", "ignoreScript", "ignoreDependencies"] {
+        if let Value::Array(ig) = &ignore[igr] {
+            for v in ig {
+                if let Value::String(p) = v {
+                    let next = p.replace(".*", "").replace("*", "");
+                    if !ignores.contains(&next) {
+                        ignores.push(next);
+                    }
+                }
+            }
+        }
+    }
+
+    ignores
 }

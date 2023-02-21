@@ -80,7 +80,7 @@ fn handle_args(args: Args) {
                     let status = unzip(&file_path, &config.cache_dir);
 
                     if status == 0 {
-                        remove_files(Path::new(&config.cache_dir).join("ant-design-pro"));
+                        // remove_files(Path::new(&config.cache_dir).join("ant-design-pro"));
 
                         //  根据版本号下载最新模板
                         // fs::remove_file(&file_path).expect("文件删除失败！");
