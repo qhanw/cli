@@ -6,10 +6,16 @@ use std::path::{Path, PathBuf};
 use serde_json::Value;
 
 pub fn unzip(fname: &str, cache_dir: &str) -> i32 {
-    fs::remove_dir_all(Path::new(cache_dir).join("ant-design-pro")).expect("文件删除失败！");
+    // 删除缓存目录
+    let dir = Path::new("ant-design-pro/");
+    let is_exists = dir.exists();
 
+    if is_exists {
+        fs::remove_dir_all(dir).expect("文件删除失败！")
+    }
+
+    // 忽略文件配置
     let ignore_rules = ignore_rules(read_package_json(&fname));
-    println!("ignore_rules {:?}", &ignore_rules);
 
     let file = fs::File::open(fname).unwrap();
     let mut archive = zip::ZipArchive::new(file).unwrap();
@@ -19,32 +25,23 @@ pub fn unzip(fname: &str, cache_dir: &str) -> i32 {
 
         let outpath = match file.enclosed_name() {
             Some(path) => {
-                // let p = path.to_str().unwrap().to_string().replace("-master", "");
+                // 更改导出文件名，并过滤掉忽略文件
+                let path_arr: Vec<&str> = path.to_str().unwrap().split("-master/").collect();
 
-                let p = path.strip_prefix("ant-design-pro-master");
+                let mut is_ignore = false;
 
-                let ps = match p {
-                    Ok(a) => Path::new("ant-design-pro").join(a),
-                    Err(_) => path.to_owned(),
-                };
-
-                if let Some(x) = ps.to_str() {
-                    let mut is_ignore = false;
-                    for igr in &ignore_rules {
-                        let p = format!("ant-design-pro/{igr}").to_lowercase();
-
-                        if x.to_lowercase().starts_with(&p) {
-                            is_ignore = true;
-                            break;
-                        }
-                    }
-
-                    if is_ignore {
-                        continue;
+                for igr in &ignore_rules {
+                    if path_arr[1].to_lowercase().starts_with(&igr.to_lowercase()) {
+                        is_ignore = true;
+                        break;
                     }
                 }
 
-                ps
+                if is_ignore {
+                    continue;
+                }
+
+                PathBuf::from(path_arr.join("/"))
             }
             None => continue,
         };
@@ -112,7 +109,7 @@ fn read_package_json(fname: &str) -> Value {
     serde_json::from_str(&contents).unwrap()
 }
 
-// 忽略文件规则
+// 解析忽略文件规则
 fn ignore_rules(package: Value) -> Vec<String> {
     let mut ignores = vec![
         String::from("pnpm-lock.yaml"),
