@@ -1,10 +1,10 @@
-use std::{
-    fs,
-    path::{Path, PathBuf},
-    process,
-};
+use std::{fs, path::Path};
 
 use clap::{Parser, Subcommand};
+
+mod extract;
+use cli::{download_template, Config};
+use extract::unzip;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -36,81 +36,27 @@ enum Commands {
 fn main() {
     let args = Args::parse();
 
-    handle_args(args);
+    let cfg = Config::new();
+
+    bootstraps(args, cfg);
 }
 
-struct Config {
-    cache_dir: String,
-    temp_address: String,
-    cli_address: String,
-    download_address: String,
-}
-
-mod extract;
-use extract::unzip;
-
-fn handle_args(args: Args) {
-    let config = Config {
-        cache_dir: String::from("./.temp"),
-        temp_address: String::from("https://github.com/ant-design/ant-design-pro.git"),
-        cli_address: String::from("https://github.com/biz-kits/cli.git"),
-        download_address: String::from(
-            "https://codeload.github.com/ant-design/ant-design-pro/zip/refs/heads/master",
-        ),
-    };
-
+fn bootstraps(args: Args, cfg: Config) {
     match &args.command {
         Commands::New { name, simple } => {
             if let Some(name) = name {
                 // 创建缓存文件夹
-                let cache_dir_exists = Path::new(&config.cache_dir).exists();
+                let cache_dir_exists = Path::new(&cfg.cache_dir).exists();
                 if !cache_dir_exists {
-                    fs::create_dir(&config.cache_dir).expect("文件夹创建失败！！！");
+                    fs::create_dir(&cfg.cache_dir).expect("文件夹创建失败！！！");
                 }
 
-                println!("create app, name is: {}, {}", name, simple);
+                let fname = format!("{}/{}.zip", cfg.cache_dir, cfg.temp_origin.0);
 
-                let temp_exists = Path::new(&config.cache_dir).join("temp.zip").exists();
-
-                if temp_exists {
-                    let file_path = format!("{}/temp.zip", config.cache_dir);
-                    let status = unzip(&file_path, &config.cache_dir);
-
+                if let Some(..) = download_template(&fname, &cfg) {
+                    let status = unzip(&fname, &cfg);
                     if status == 0 {
-
-                        //  根据版本号下载最新模板
-                        // fs::remove_file(&file_path).expect("文件删除失败！");
-                    }
-                } else {
-                    let clone_exec = format!(
-                        "cd {} && curl {} --output temp.zip",
-                        &config.cache_dir, &config.download_address
-                    );
-
-                    // 执行模版文件下载
-                    let output = process::Command::new("sh")
-                        .arg("-c")
-                        .arg(clone_exec)
-                        .status()
-                        .expect("failed to execute process");
-
-                    // 完成下载后进行文件解压
-                    match output.code() {
-                        Some(0) => {
-                            println!("template files download completed!");
-
-                            let file_path = format!("{}/temp.zip", config.cache_dir);
-                            let status = unzip(&file_path, &config.cache_dir);
-
-                            if status == 0 {
-                                //  根据版本号下载最新模板
-                                // fs::remove_file(&file_path).expect("文件删除失败！");
-                            }
-                        }
-                        _ => {
-                            println!("template files download failed!");
-                            println!("{:?}", output);
-                        }
+                        println!("create app, name is: {}, {}", name, simple);
                     }
                 }
             } else {

@@ -3,11 +3,18 @@ use std::io;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
+use cli::Config;
 use serde_json::Value;
 
-pub fn unzip(fname: &str, cache_dir: &str) -> i32 {
+pub fn unzip(fname: &str, cfg: &Config) -> i32 {
+    let Config {
+        temp_origin,
+        cache_dir,
+        ..
+    } = &cfg;
+
     // 删除缓存目录
-    let dir = Path::new("ant-design-pro/");
+    let dir = Path::new(&temp_origin.0);
     let is_exists = dir.exists();
 
     if is_exists {
