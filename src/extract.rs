@@ -62,19 +62,19 @@ pub fn unzip(fname: &str, cfg: &Config) -> i32 {
 
         let output = get_path(cache_dir, &outpath);
 
-        println!("file: {} ", file.name());
+        // println!("file: {} ", file.name());
 
         if (*file.name()).ends_with('/') {
-            println!("File {} extracted to \"{}\"", i, outpath.display());
+            // println!("File {} extracted to \"{}\"", i, outpath.display());
 
             fs::create_dir_all(&output).unwrap();
         } else {
-            println!(
-                "File {} extracted to \"{}\" ({} bytes)",
-                i,
-                outpath.display(),
-                file.size()
-            );
+            // println!(
+            //     "File {} extracted to \"{}\" ({} bytes)",
+            //     i,
+            //     outpath.display(),
+            //     file.size()
+            // );
             if let Some(p) = outpath.parent() {
                 if !p.exists() {
                     fs::create_dir_all(get_path(cache_dir, &p.to_owned())).unwrap();

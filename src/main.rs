@@ -33,6 +33,9 @@ enum Commands {
     },
 }
 
+mod copy_template;
+use copy_template::copy_template;
+
 fn main() {
     let args = Args::parse();
 
@@ -56,7 +59,17 @@ fn bootstraps(args: Args, cfg: Config) {
                 if let Some(..) = download_template(&fname, &cfg) {
                     let status = unzip(&fname, &cfg);
                     if status == 0 {
-                        println!("create app, name is: {}, {}", name, simple);
+                        println!("Starting create app, name is: {}", name);
+
+                        let from_path = format!("{}/{}", cfg.cache_dir, cfg.temp_origin.0);
+
+                        let finished = copy_template(from_path.to_string(), name.to_owned());
+
+                        if finished {
+                            println!("completed to create application  {}", name);
+                        } else {
+                            println!("Failed to create application  {}", name);
+                        }
                     }
                 }
             } else {
